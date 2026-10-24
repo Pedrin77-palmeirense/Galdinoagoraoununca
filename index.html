@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz do Nono</title>
+<style>
+:root { --blue:#168cff; --blue2:#0755a6; --bg:#05070c; --panel:#0d1420; --text:#f4f8ff; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); }
+button { font:inherit; cursor:pointer; }
+.logo { position:fixed; top:18px; right:22px; z-index:5; display:flex; align-items:center; gap:8px; color:#fff; font-weight:900; letter-spacing:3px; text-shadow:0 0 12px #168cff; }
+.logo img { width:43px; height:43px; object-fit:cover; border-radius:50%; border:2px solid var(--blue); }
+.logo span { font-size:17px; }
+.screen { min-height:100vh; display:none; align-items:center; justify-content:center; padding:90px 22px 35px; }
+.screen.active { display:flex; }
+.intro-wrap { text-align:center; width:min(720px,100%); }
+.eyebrow { color:#6eb8ff; letter-spacing:4px; font-size:12px; font-weight:bold; text-transform:uppercase; }
+h1 { font-size:clamp(28px,5vw,48px); margin:18px 0 12px; }
+.subtitle { color:#aebbd0; line-height:1.6; }
+.actions { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; margin-top:30px; }
+.btn { border:1px solid var(--blue); background:var(--blue); color:white; border-radius:12px; padding:13px 28px; font-weight:700; transition:.18s; }
+.btn:hover { transform:translateY(-2px); box-shadow:0 0 22px #168cff55; }
+.btn.secondary { background:transparent; color:#dceeff; border-color:#52657d; }
+.quiz-shell { width:min(980px,100%); }
+.quiz-top { display:flex; justify-content:space-between; align-items:center; gap:12px; color:#9eb4ce; font-size:14px; margin-bottom:20px; }
+.progress { height:5px; background:#172337; border-radius:99px; overflow:hidden; margin-bottom:26px; }
+.progress-fill { height:100%; width:0; background:linear-gradient(90deg,#0755a6,#38a4ff); transition:width .25s; }
+.question { width:min(620px,100%); min-height:190px; margin:0 auto 30px; border:2px solid #246fb6; border-radius:22px; background:linear-gradient(145deg,#101a2a,#080d15); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px; text-align:center; box-shadow:0 0 32px #168cff16; }
+.question small { color:#6eb8ff; letter-spacing:2px; text-transform:uppercase; font-weight:bold; }
+.question h2 { font-size:clamp(20px,3vw,29px); line-height:1.4; margin:14px 0 0; }
+.answers { display:grid; grid-template-columns:1fr 1fr; gap:15px 24px; }
+.answer { min-height:90px; background:#0b111c; border:1px solid #38516e; color:#f4f8ff; border-radius:13px; padding:18px; display:flex; align-items:center; gap:13px; text-align:left; transition:.18s; }
+.answer:hover:not(:disabled) { border-color:var(--blue); background:#10233a; transform:translateY(-2px); }
+.answer .letter { flex:0 0 34px; height:34px; display:grid; place-items:center; border:1px solid #3a91e7; color:#73bdff; border-radius:9px; font-weight:bold; }
+.answer:disabled { cursor:default; opacity:.9; }
+.answer.correct { border-color:#32d583; background:#0b2a22; }
+.answer.wrong { border-color:#ff4d5a; background:#301219; }
+.timer { color:#fff; font-weight:bold; font-variant-numeric:tabular-nums; }
+.timer.warn { color:#ff6974; }
+.result-card { text-align:center; width:min(720px,100%); padding:42px 28px; border:2px solid var(--blue); border-radius:22px; background:#05070c; box-shadow:0 0 36px #168cff22; }
+.result-card p { color:#b7c6d9; line-height:1.7; }
+#fail { background:#8e0714; }
+#fail .result-card { border-color:#ff8790; box-shadow:0 0 35px #ff1b3b25; }
+#fail .btn { background:#f22d43; border-color:#ff8b96; }
+#fail .eyebrow { color:#ffd0d4; }
+#fail .result-card p { color:#ffe2e5; }
+@media (max-width:600px) {
+ .logo { top:12px; right:12px; gap:5px; } .logo img { width:34px;height:34px; } .logo span {font-size:13px;}
+ .answers { grid-template-columns:1fr; gap:11px; } .answer {min-height:65px;}
+ .question {min-height:165px; padding:22px 16px;}
+ .quiz-top {font-size:12px;}
+}
+</style>
+</head>
+<body>
+<div class="logo"><img src="logo.png" alt="Logo"><span>NONO</span></div>
+
+<section id="intro" class="screen active">
+  <div class="intro-wrap">
+    <div class="eyebrow">Desafio especial</div>
+    <h1>Galdino, você está preparado?</h1>
+    <p class="subtitle">Dez perguntas separam você do seu presente.</p>
+    <div class="actions">
+      <button class="btn" id="yesBtn">Sim</button>
+      <button class="btn secondary" id="noBtn">Não, sou de humanas</button>
+    </div>
+    <p id="introMsg" class="subtitle" aria-live="polite"></p>
+  </div>
+</section>
+
+<section id="quiz" class="screen">
+ <div class="quiz-shell">
+   <div class="quiz-top"><span id="questionCount">PERGUNTA 1 DE 6</span><span>Tempo: <span id="timer" class="timer">00:30</span></span></div>
+   <div class="progress"><div id="progressFill" class="progress-fill"></div></div>
+   <div class="question"><small id="questionTag">Desafio 01</small><h2 id="questionText">Lorem ipsum dolor sit amet?</h2></div>
+   <div id="answers" class="answers"></div>
+ </div>
+</section>
+
+<section id="success" class="screen">
+ <div class="result-card">
+   <div class="eyebrow">Missão concluída</div>
+   <h1>Parabéns, agora sim pode pegar seu presente de verdade!</h1>
+   <p>Você acertou as dez perguntas. Mandou bem!</p>
+   <button class="btn" id="againWin">Jogar novamente</button>
+ </div>
+</section>
+
+<section id="fail" class="screen">
+ <div class="result-card">
+   <div class="eyebrow">Missão falhou</div>
+   <h1>Errou, tente novamente</h1>
+   <p>Uma resposta errada foi suficiente. Respire fundo e tente outra vez.</p>
+   <button class="btn" id="tryAgain">Tentar dnv</button>
+ </div>
+</section>
+<!-- EFEITOS SONOROS -->
+<audio id="somPergunta" src="Trilha Sonora De Seleção De Peguntas Do (Show Do Milhão) SBT  1999-2009 - Vinicius Lacerda e silva.mp3"></audio>
+
+<audio id="somAcerto" src="Green Screen + Efeito Sonoro (Acerto) - sound Effects.mp3"></audio>
+
+<audio id="somErro" src="efeito sonoro de erro - PEDRO EDITIONS.mp3"></audio>
+
+<!-- TRILHA SONORA -->
+<audio id="trilhaSonora" src="58. Hammer of Justice (DELTARUNE Chapter 3+4 Soundtrack) - Toby Fox - Toby Fox.mp3" loop></audio>
+<script>
+const somPergunta = document.getElementById("somPergunta");
+const somAcerto = document.getElementById("somAcerto");
+const somErro = document.getElementById("somErro");
+const trilhaSonora = document.getElementById("trilhaSonora");
+
+// Volumes (de 0 a 1): ajuste aqui se quiser mais baixo ou mais alto
+const VOLUME_TRILHA = 0.25;
+const VOLUME_EFEITOS = 0.15;
+
+trilhaSonora.volume = VOLUME_TRILHA;
+[somPergunta, somAcerto, somErro].forEach(s => s.volume = VOLUME_EFEITOS);
+
+function tocarSom(som) {
+  som.currentTime = 0;
+  som.play().catch(e => console.warn("Não tocou:", som.id, e.message));
+}
+
+function iniciarTrilha() {
+  if (!trilhaSonora.paused) return;
+  trilhaSonora.play().catch(() => {});
+}
+
+// Tenta tocar a trilha assim que a página abre (o navegador pode bloquear)
+iniciarTrilha();
+
+// Qualquer clique, toque ou tecla também libera a trilha
+document.addEventListener("pointerdown", iniciarTrilha);
+document.addEventListener("keydown", iniciarTrilha);
+
+const questions = [
+  { text:"Qual dessas frases seria mais provável de o Taylor falar pro Enzo?", options:["Enzo seu viado para de me atrapalhar","Enzo gostoso vem pra cá","Se Tarot funcionasse, truco era briga de mago","Nada haver"], correct:1 },
+  { text:"Se a Alice tivesse que chamar um menino para dupla num trabalho de matemática, quem seria?", options:["Cauã","Douglas","Enzo Lucas","Enzo Diniz"], correct:0 },
+  { text:"Qual frase está no top 1 de frases mais faladas pelo Douglas?", options:["Lula é ladrão, mentiroso e corrupto","Bença Padrinho","UUUU mongol","O inimigo do inimigo é meu amigo que é amigo do inimigo do meu amigo"], correct:1 },
+  { text:"A Ana Júlia está num trilho de trem que corta pra dois lados. Caso ela puxe a alavanca, o trem que está vindo vai passar por cima de 5 pessoas aleatórias; se não, passa por cima do Douglas e do Taylor. Ela puxa a alavanca?", options:["Sim","Lula presidente","Não","Ela pulava na frente do trem e ninguém morre"], correct:2 },
+  { text:"Qual pessoa o Galdino mais tiraria de sala só por tirar?", options:["Taylor","Enzo","Taylor e Enzo","Valentina"], correct:2 },
+  { text:"Tem trote na sexta que vem. O Pedro Almeida vem vestido de quê?", options:["Alguma coisa envolvendo o tema","Algo combinando com os meninos","Ele falta, simples","Qualquer coisa só pra levar o violão"], correct:3 },
+  { text:"Galdino gasta 15 horas para fazer uma revisão de 15 questões para passar e corrigir. Como a sala reage?", options:["É xingado de insuportável","Apenas copia e segue o fluxo","Agradece o esforço dele","O Taylor e o Enzo são tirados de sala"], correct:0 },
+  { text:"ITA 2023: Na expansão de (imagem da questão), a soma de todos os coeficientes das potências múltiplas de 3 é:", options:["114","228","342","1050"], correct:2, skip:true },
+  { text:"A Francisca chega na sala e diz que precisamos decidir com a turma da manhã uma cor. O que acontece?", options:["Se unimos e pensamos numa cor","Brigas intensas pq a manhã quer comandar tudo e nois não aceita","Discutimos respeitosamente","Nois boicota e decide uma cor por nós mesmos"], correct:1 },
+  { text:"Qual pessoa nós sempre pensamos em ser nosso padrinho?", options:["Galdino","Resposta A","Resposta B","Todas as alternativas"], correct:3 }
+];
+
+const screens = [...document.querySelectorAll(".screen")];
+const answersEl = document.getElementById("answers");
+const timerEl = document.getElementById("timer");
+let current = 0, seconds = 30, interval = null, locked = false;
+
+// Botão quase invisível no canto para pular a pergunta (só aparece nas perguntas com skip: true)
+const btnPular = document.createElement("button");
+btnPular.textContent = "pelo amor de Deus vamo pra próxima";
+btnPular.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:6;background:none;border:none;color:#fff;font-size:12px;opacity:.15;transition:opacity .2s;display:none;cursor:pointer;";
+btnPular.addEventListener("mouseenter", () => btnPular.style.opacity = ".8");
+btnPular.addEventListener("mouseleave", () => btnPular.style.opacity = ".15");
+btnPular.addEventListener("click", pularPergunta);
+document.body.appendChild(btnPular);
+
+function showScreen(id) {
+  screens.forEach(s => s.classList.toggle("active", s.id === id));
+  if (id !== "quiz") btnPular.style.display = "none";
+}
+function startQuiz() {
+  current = 0;
+  showScreen("quiz");
+  renderQuestion();
+}
+function renderQuestion() {
+  clearInterval(interval);
+  locked = false;
+  seconds = 30;
+  timerEl.textContent = "00:30";
+  timerEl.classList.remove("warn");
+  const q = questions[current];
+  document.getElementById("questionCount").textContent = `PERGUNTA ${current + 1} DE ${questions.length}`;
+  document.getElementById("questionTag").textContent = `Desafio ${String(current + 1).padStart(2,"0")}`;
+  document.getElementById("questionText").textContent = q.text;
+  document.getElementById("progressFill").style.width = `${(current / questions.length) * 100}%`;
+  answersEl.innerHTML = "";
+  q.options.forEach((option, i) => {
+    const button = document.createElement("button");
+    button.className = "answer";
+    button.innerHTML = `<span class="letter">${String.fromCharCode(65+i)}</span><span></span>`;
+    button.querySelector("span:last-child").textContent = option;
+    button.addEventListener("click", () => chooseAnswer(i, button));
+    answersEl.appendChild(button);
+  });
+  btnPular.style.display = q.skip ? "block" : "none";
+  tocarSom(somPergunta);
+  interval = setInterval(() => {
+    seconds--;
+    timerEl.textContent = `00:${String(seconds).padStart(2,"0")}`;
+    if (seconds <= 8) timerEl.classList.add("warn");
+    if (seconds <= 0) {
+      clearInterval(interval);
+      somPergunta.pause();
+      tocarSom(somErro);
+      showScreen("fail");
+    }
+  }, 1000);
+}
+function chooseAnswer(index, button) {
+  if (locked) return;
+  locked = true;
+  clearInterval(interval);
+  somPergunta.pause();
+  const q = questions[current];
+  const buttons = [...answersEl.querySelectorAll("button")];
+  buttons.forEach(b => b.disabled = true);
+  if (index !== q.correct) {
+    button.classList.add("wrong");
+    tocarSom(somErro);
+    setTimeout(() => showScreen("fail"), 450);
+    return;
+  }
+  button.classList.add("correct");
+  tocarSom(somAcerto);
+  document.getElementById("progressFill").style.width = `${((current + 1) / questions.length) * 100}%`;
+  setTimeout(() => {
+    current++;
+    if (current >= questions.length) showScreen("success");
+    else renderQuestion();
+  }, 450);
+}
+// Pula a pergunta atual sem penalidade
+function pularPergunta() {
+  if (locked) return;
+  clearInterval(interval);
+  somPergunta.pause();
+  current++;
+  if (current >= questions.length) showScreen("success");
+  else renderQuestion();
+}
+
+const startBtn = document.getElementById("startBtn");
+if (startBtn) {
+  startBtn.addEventListener("click", () => {
+    iniciarTrilha();
+    showScreen("intro");
+  });
+} else {
+  showScreen("intro");
+}
+document.getElementById("yesBtn").addEventListener("click", startQuiz);
+document.getElementById("noBtn").addEventListener("click", () => {
+  document.getElementById("introMsg").textContent = "Então se prepare primeiro, Galdino!";
+});
+document.getElementById("tryAgain").addEventListener("click", startQuiz);
+document.getElementById("againWin").addEventListener("click", startQuiz);
+</script>
+</body>
+</html>
